@@ -1,0 +1,22 @@
+{
+  "name": "ambiread",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.html",
+  "scripts": {
+    "build": "webpack",
+    "start": "npx watch-http-server .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "node-web-audio-api": "^0.21.3",
+    "replicate": "^1.0.1"
+  },
+  "devDependencies": {
+    "webpack": "^5.96.1",
+    "webpack-cli": "^5.1.4"
+  },
+  "type": "module"
+}

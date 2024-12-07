@@ -1,7 +1,7 @@
-import Replicate from "replicate";
-const replicate = new Replicate({
-    auth: 'r8_IoB3iwr2hRPHYJzsaGxb6aaG5PhSbo32fmavo',
-});
+// import Replicate from "replicate";
+// const replicate = new Replicate({
+//     auth: 'r8_IoB3iwr2hRPHYJzsaGxb6aaG5PhSbo32fmavo',
+// });
 
 const textContainer = document.getElementById('text-container');
 let page = 0;
@@ -9,11 +9,11 @@ let page = 0;
 textContainer.innerText = getText(page);
 setPageNavigationVisibility(page);
 
-generateBackgroundMusic('rock song').then((response) => {
-    const audio = document.createElement('audio');
-    audio.src = URL.createObjectURL(response.output);
-    audio.play();
-});
+// generateBackgroundMusic('rock song').then((response) => {
+//     const audio = document.createElement('audio');
+//     audio.src = URL.createObjectURL(response.output);
+//     audio.play();
+// });
 
 function getText(index) {
     return getInputText().split('\n')[index];

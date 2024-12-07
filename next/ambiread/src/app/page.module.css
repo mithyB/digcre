@@ -41,6 +41,10 @@
   cursor: pointer;
 }
 
+.previousPage[hidden], .nextPage[hidden] {
+  display: none;
+}
+
 .previousPage {
   left: calc(50% - 400px);
 }

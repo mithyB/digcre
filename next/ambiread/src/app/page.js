@@ -161,8 +161,20 @@ export default function Home() {
   const [text, setText] = useState(getText(0));
   const [isPreviousPageButtonVisible, setIsPreviousPageButtonVisible] = useState(false);
   const [isNextPageButtonVisible, setIsNextPageButtonVisible] = useState(false);
+  const [isBookLoaded, setIsBookLoaded] = useState(false);
+  let sceneDescription = [];
 
   function getInputText() {
+    return `The moon hung low, casting eerie shadows over the desolate cityscape. Sophie moved cautiously, her breath shallow and controlled. The once bustling streets were now silent, except for the occasional growl of the undead. The city had been overrun for months, and every step felt like a gamble with death.
+She crouched behind an overturned car, peering through the shattered window. A group of zombies shuffled aimlessly ahead, their decayed forms barely illuminated by the pale moonlight. Sophie gripped her makeshift weapon—a rusted metal pipe—tightly, her knuckles turning white. She had to make it to the old pharmacy on 3rd Street. Rumor had it that there were still supplies left, untouched by looters and the undead.
+Moving slowly, Sophie avoided debris and broken glass, her ears straining for any sound that might signal danger. She slipped through an alleyway, the narrow passageway amplifying the tension. Every creak, every distant moan made her heart race.
+As she reached the end of the alley, she saw it—the pharmacy, its neon sign flickering faintly. Relief washed over her, but she knew the danger was far from over. She needed to be quick. The door to the pharmacy was ajar, its hinges rusted and groaning as she pushed it open just enough to slip inside.
+The interior was dark and musty, the air thick with the scent of decay. Shelves were toppled over, and broken glass littered the floor. Sophie moved silently, her eyes adjusting to the dim light. She quickly scanned the shelves, grabbing anything that looked useful—bandages, antibiotics, and painkillers.
+Just as she was about to leave, a loud crash echoed through the store. Sophie froze, her heart pounding in her ears. She turned slowly, her eyes widening in horror. A group of zombies had followed her inside, drawn by the noise. She backed away, clutching her pipe, ready to fight for her life.
+But then, something strange happened. The zombies stopped, their eyes glazing over as if they were suddenly uninterested. Sophie watched in disbelief as they turned and shuffled away, leaving her unharmed. Confused but grateful, she made her way back to the alley, supplies in hand.
+As she emerged from the pharmacy, Sophie saw something glinting on the ground. She picked it up—a small, round device, emitting a low-frequency hum. It was a signal jammer, designed to interfere with the zombies' senses. She looked around and saw a figure in the shadows, watching her. Before she could react, the figure disappeared into the night.
+Sophie realized she wasn’t alone in the fight for survival. Someone out there was helping, silently guiding her through the apocalypse. The city was still dangerous, but hope flickered in the darkness. With newfound determination, she set off into the night, ready to face whatever came next.`;
+
     return `Once, in a quaint town with cobblestone streets and friendly neighbors, there lived a young woman named Clara. She worked at the local library, a charming building that smelled of old books and fresh coffee. Clara enjoyed the quiet rhythm of her days, helping visitors find the perfect book and sharing stories with children during reading hour.
         One chilly autumn evening, Clara decided to take a different route home. Her usual path was blocked by construction, so she turned down an unfamiliar alley. At first, it seemed like any other alley—narrow and dimly lit. But as she walked, the world began to shift. The buildings seemed taller, their windows dark and empty. The air grew cooler, and a strange fog rolled in.
         Clara's footsteps echoed on the cobblestones, which now looked uneven and old. She glanced back, hoping to see the familiar sights of her town, but the alley had vanished into the fog. With no choice but to continue, she pressed on, heart pounding in her chest.
@@ -175,6 +187,8 @@ export default function Home() {
   }
 
   function getSceneDescription(index) {
+    return sceneDescription[index];
+
     return [`
       Mood: Calm, ordinary
       Setting: A quaint town, local library
@@ -252,7 +266,7 @@ export default function Home() {
         // wait 1 second before generating the next music
         await new Promise(resolve => setTimeout(resolve, 1000));
 
-        generate(i).then(({index, url}) => setPlaylist(() => {
+        generateMusic(i).then(({index, url}) => setPlaylist(() => {
           const copy = [...playlist];
           playlist[index] = copy[index] = url; 
           return copy;
@@ -260,15 +274,15 @@ export default function Home() {
       }
     })();
 
-    return await generate(0).then(({index, url}) => setPlaylist(() => { 
+    return await generateMusic(0).then(({index, url}) => setPlaylist(() => { 
       const copy = [...playlist];
       playlist[index] = copy[index] = url; 
       return copy;
     }));
   }
   
-  const generate = async (index) => {
-    return fetch("/backend", {
+  const generateMusic = async (index) => {
+    return fetch("/generate-music", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -279,6 +293,25 @@ export default function Home() {
     })
     .then(response => response.json())
     .then(url => ({ index, url }));
+  }
+
+  const generateOutline = async () => {
+    return fetch("/generate-outline", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        prompt: getInputText(),
+      }),
+    })
+    .then(response => response.json())
+    .then(outline => outline.map(paragraph => `
+      Mood: ${paragraph.mood}
+      Setting: ${paragraph.setting}
+      Cultural Context: ${paragraph['cultural context']}
+      Character Theme: ${paragraph['character theme']}
+      Narrative Arc: ${paragraph['narrative arc']}`));
   }
   
   // const generateAndPlay = async () => {
@@ -323,11 +356,14 @@ export default function Home() {
     console.log('onLoad');
     const player = new BackgroundMusicPlayer();
     setPlayer(player);
+    sceneDescription = await generateOutline();
     await generateMusicForAllPages();
 
     console.log('playlist', playlist);
 
     player.play(playlist[0]);
+
+    setIsBookLoaded(true);
   }
 
   const log = async () => {
@@ -363,9 +399,8 @@ export default function Home() {
       <header className={styles.header}>
         <h1>AmbiRead</h1>
       </header>
-      <button onClick={onLoad}>Load</button>
-      <button onClick={log}>Log</button>
-      <section className={styles.section}>
+      <button onClick={onLoad}>Open Book</button>
+      <section hidden={!isBookLoaded} className={styles.section}>
         <button 
           hidden={!isPreviousPageButtonVisible} 
           className={styles.previousPage} 

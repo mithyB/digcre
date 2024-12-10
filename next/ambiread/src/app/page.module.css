@@ -41,7 +41,7 @@
   cursor: pointer;
 }
 
-.previousPage[hidden], .nextPage[hidden] {
+.section[hidden], .previousPage[hidden], .nextPage[hidden] {
   display: none;
 }
 

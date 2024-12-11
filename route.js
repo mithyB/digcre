@@ -1,178 +1,207 @@
-import Replicate from "replicate";
-import {AudioContext} from 'node-web-audio-api';
+import { AudioContext } from 'node-web-audio-api';
+import Replicate from 'replicate';
 const replicate = new Replicate({
-    auth: 'r8_IoB3iwr2hRPHYJzsaGxb6aaG5PhSbo32fmavo',
+  auth: 'xxx',
 });
 
 class BackgroundMusicPlayer {
-    _context = new AudioContext();
-    _trackNumber = 0;
-    _currentGainNode;
-    _currentSource;
+  _context = new AudioContext();
+  _trackNumber = 0;
+  _currentGainNode;
+  _currentSource;
 
-    async playLoadingSound(prompt) {
-        console.log('Start generating loading sound...');
+  async playLoadingSound(prompt) {
+    console.log('Start generating loading sound...');
 
-        await this.generateAndPlay(`${prompt}, loading sound, single note, soothing, declick, no reverb`, 1);
+    await this.generateAndPlay(
+      `${prompt}, loading sound, single note, soothing, declick, no reverb`,
+      1,
+    );
+  }
+
+  async generate(prompt, duration = 16) {
+    const input = {
+      prompt: `Generate ambient background music without percussion in 120bpm that can be played on repeat (in a loop) for the following scene: "${prompt}"`,
+      // prompt: `ambient background music, no percussion, 120bpm, can be played on repeat, description: "${prompt}"`,
+      model_version: 'stereo-melody-large',
+      output_format: 'mp3',
+      normalization_strategy: 'rms',
+      duration,
+    };
+
+    console.log('Running audio generation model...');
+    const promise = new Promise(async (resolve, reject) => {
+      const output = await replicate.run(
+        'meta/musicgen:671ac645ce5e552cc63a54a2bbff63fcf798043055d2dac5fc9e36a837eedcfb',
+        { input },
+        async (prediction) => {
+          console.log('Generating music...', prediction);
+          if (prediction.output) {
+            console.log('Generated audio');
+            resolve(prediction.output);
+          }
+        },
+      );
+    });
+
+    return await promise;
+  }
+
+  async play(url, newGainNode) {
+    console.log('Start playing audio...', url);
+
+    // stream audio buffer from url and play it (without browser)
+    const audioStream = await fetch(url);
+    const arrayBuffer = await audioStream.arrayBuffer();
+
+    const audioData = new Uint8Array(arrayBuffer);
+    const audioBuffer = await this._context.decodeAudioData(audioData.buffer);
+
+    if (!this._currentGainNode) {
+      this._currentSource = await this._playLoopingStreamWithCrossfade2(
+        audioBuffer,
+        newGainNode,
+      );
+    } else {
+      this._currentSource = await this._crossfadeToNewStream2(
+        audioBuffer,
+        newGainNode,
+        16,
+      );
     }
 
-    async generate(prompt, duration = 16) {
-        const input = {
-            prompt: `Generate ambient background music without percussion in 120bpm that can be played on repeat (in a loop) for the following scene: "${prompt}"`,
-            // prompt: `ambient background music, no percussion, 120bpm, can be played on repeat, description: "${prompt}"`,
-            model_version: "stereo-melody-large",
-            output_format: "mp3",
-            normalization_strategy: "rms",
-            duration
-        };
+    this._currentGainNode = newGainNode;
 
-        console.log('Running audio generation model...');
-        const promise = new Promise(async (resolve, reject) => {
+    console.log(`Currently playing (track ${this._trackNumber}): ${url}`);
+  }
 
-            const output = await replicate.run("meta/musicgen:671ac645ce5e552cc63a54a2bbff63fcf798043055d2dac5fc9e36a837eedcfb", { input }, async (prediction) => {
-                console.log('Generating music...', prediction);
-                if (prediction.output) {
-                    console.log('Generated audio');
-                    resolve(prediction.output);
-                }
-            });
-        });
+  async generateAndPlay(prompt, duration = 16) {
+    this._trackNumber++;
+    console.log(`Start generating music (track ${this._trackNumber})...`);
 
-        return await promise;
-    }
-    
-    async play(url, newGainNode) {
-        console.log('Start playing audio...', url);
+    const newGainNode = this._context.createGain();
+    newGainNode.connect(this._context.destination);
+    console.log('Created and connected gain node');
 
-        // stream audio buffer from url and play it (without browser)
-        const audioStream = await fetch(url);
-        const arrayBuffer = await audioStream.arrayBuffer();
+    const url = await this.generate(prompt, duration);
 
-        const audioData = new Uint8Array(arrayBuffer);
-        const audioBuffer = await this._context.decodeAudioData(audioData.buffer);
-
-        if (!this._currentGainNode) {
-            this._currentSource = await this._playLoopingStreamWithCrossfade2(audioBuffer, newGainNode);
-        } else {
-            this._currentSource = await this._crossfadeToNewStream2(audioBuffer, newGainNode, 16);
-        }
-
-        this._currentGainNode = newGainNode;
-
-        console.log(`Currently playing (track ${this._trackNumber}): ${url}`);
+    if (true) {
+      console.log('Press enter to play next song...');
+      await new Promise((resolve) =>
+        process.stdin.once('data', () => resolve()),
+      );
+      console.log('Playing next song...');
     }
 
-    async generateAndPlay(prompt, duration = 16) {
-        this._trackNumber++;
-        console.log(`Start generating music (track ${this._trackNumber})...`);
+    await this.play(url, newGainNode);
+  }
 
-        const newGainNode = this._context.createGain();
-        newGainNode.connect(this._context.destination);
-        console.log('Created and connected gain node');
-    
-        const url = await this.generate(prompt, duration);
+  async _playLoopingStreamWithCrossfade2(audioBuffer, gainNode) {
+    console.log('Start reading audio buffer...');
+    console.log('Playing audio buffer...');
 
-        if (true) {
-            console.log('Press enter to play next song...');
-            await new Promise((resolve) => process.stdin.once('data', () => resolve()));
-            console.log('Playing next song...');
-        }
+    // Create a buffer source and set it to loop
+    const source = this._context.createBufferSource();
+    source.buffer = audioBuffer;
+    source.loop = true;
+    source.loopStart = 0.1;
+    source.loopEnd = 15.9;
+    source.connect(gainNode);
+    source.start();
 
-        await this.play(url, newGainNode);
+    console.log('Audio playing');
+
+    return source;
+  }
+
+  async _crossfadeToNewStream2(audioBuffer, newGainNode, crossfadeTime) {
+    console.log('Crossfading currently playing audio to new audio...');
+
+    const newSource = await this._playLoopingStreamWithCrossfade2(
+      audioBuffer,
+      newGainNode,
+    );
+    console.log('New audio available. Start crossfading...');
+
+    // Crossfade from old source to new source
+    const currentTime = this._context.currentTime;
+    this._currentGainNode.gain.setValueAtTime(1, currentTime);
+    this._currentGainNode.gain.linearRampToValueAtTime(
+      0,
+      currentTime + crossfadeTime,
+    );
+
+    newGainNode.gain.setValueAtTime(0, currentTime);
+    newGainNode.gain.linearRampToValueAtTime(1, currentTime + crossfadeTime);
+
+    // Stop the old source after the crossfade
+    this._currentSource.stop(currentTime + crossfadeTime);
+
+    console.log('Crossfading done. Stopping old audio');
+
+    return newSource;
+  }
+
+  async _playLoopingStreamWithCrossfade(stream, gainNode) {
+    console.log('Start reading audio buffer...');
+    const reader = stream.getReader();
+    const chunks = [];
+
+    // Read the stream
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
     }
 
-    async _playLoopingStreamWithCrossfade2(audioBuffer, gainNode) {
-        console.log('Start reading audio buffer...');
-        console.log('Playing audio buffer...');
-    
-        // Create a buffer source and set it to loop
-        const source = this._context.createBufferSource();
-        source.buffer = audioBuffer;
-        source.loop = true;
-        source.loopStart = 0.1;
-        source.loopEnd = 15.9;
-        source.connect(gainNode);
-        source.start();
+    // Concatenate all chunks into a single Uint8Array
+    const audioData = new Uint8Array(
+      chunks.reduce((acc, chunk) => acc.concat(Array.from(chunk)), []),
+    );
+    const audioBuffer = await this._context.decodeAudioData(audioData.buffer);
 
-        console.log('Audio playing');
-    
-        return source;
-    }
+    console.log('Playing audio buffer...');
 
-    async _crossfadeToNewStream2(audioBuffer, newGainNode, crossfadeTime) {
-        console.log('Crossfading currently playing audio to new audio...');
-    
-        const newSource = await this._playLoopingStreamWithCrossfade2(audioBuffer, newGainNode);
-        console.log('New audio available. Start crossfading...');
+    // Create a buffer source and set it to loop
+    const source = this._context.createBufferSource();
+    source.buffer = audioBuffer;
+    source.loop = true;
+    source.loopStart = 0.1;
+    source.loopEnd = 15.9;
+    source.connect(gainNode);
 
-        // Crossfade from old source to new source
-        const currentTime = this._context.currentTime;
-        this._currentGainNode.gain.setValueAtTime(1, currentTime);
-        this._currentGainNode.gain.linearRampToValueAtTime(0, currentTime + crossfadeTime);
-    
-        newGainNode.gain.setValueAtTime(0, currentTime);
-        newGainNode.gain.linearRampToValueAtTime(1, currentTime + crossfadeTime);
-    
-        // Stop the old source after the crossfade
-        this._currentSource.stop(currentTime + crossfadeTime);
-        
-        console.log('Crossfading done. Stopping old audio');
-    
-        return newSource;
-    }
+    console.log('Audio playing');
 
-    async _playLoopingStreamWithCrossfade(stream, gainNode) {
-        console.log('Start reading audio buffer...');
-        const reader = stream.getReader();
-        const chunks = [];
-    
-        // Read the stream
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            chunks.push(value);
-        }
-    
-        // Concatenate all chunks into a single Uint8Array
-        const audioData = new Uint8Array(chunks.reduce((acc, chunk) => acc.concat(Array.from(chunk)), []));
-        const audioBuffer = await this._context.decodeAudioData(audioData.buffer);
+    return source;
+  }
 
-        console.log('Playing audio buffer...');
-    
-        // Create a buffer source and set it to loop
-        const source = this._context.createBufferSource();
-        source.buffer = audioBuffer;
-        source.loop = true;
-        source.loopStart = 0.1;
-        source.loopEnd = 15.9;
-        source.connect(gainNode);
+  async _crossfadeToNewStream(newStream, newGainNode, crossfadeTime) {
+    console.log('Crossfading currently playing audio to new audio...');
 
-        console.log('Audio playing');
-    
-        return source;
-    }
+    const newSource = await this._playLoopingStreamWithCrossfade(
+      newStream,
+      newGainNode,
+    );
+    console.log('New audio available. Start crossfading...');
 
-    async _crossfadeToNewStream(newStream, newGainNode, crossfadeTime) {
-        console.log('Crossfading currently playing audio to new audio...');
-    
-        const newSource = await this._playLoopingStreamWithCrossfade(newStream, newGainNode);
-        console.log('New audio available. Start crossfading...');
+    // Crossfade from old source to new source
+    const currentTime = this._context.currentTime;
+    this._currentGainNode.gain.setValueAtTime(1, currentTime);
+    this._currentGainNode.gain.linearRampToValueAtTime(
+      0,
+      currentTime + crossfadeTime,
+    );
 
-        // Crossfade from old source to new source
-        const currentTime = this._context.currentTime;
-        this._currentGainNode.gain.setValueAtTime(1, currentTime);
-        this._currentGainNode.gain.linearRampToValueAtTime(0, currentTime + crossfadeTime);
-    
-        newGainNode.gain.setValueAtTime(0, currentTime);
-        newGainNode.gain.linearRampToValueAtTime(1, currentTime + crossfadeTime);
-    
-        // Stop the old source after the crossfade
-        this._currentSource.stop(currentTime + crossfadeTime);
-        
-        console.log('Crossfading done. Stopping old audio');
-    
-        return newSource;
-    }
+    newGainNode.gain.setValueAtTime(0, currentTime);
+    newGainNode.gain.linearRampToValueAtTime(1, currentTime + crossfadeTime);
+
+    // Stop the old source after the crossfade
+    this._currentSource.stop(currentTime + crossfadeTime);
+
+    console.log('Crossfading done. Stopping old audio');
+
+    return newSource;
+  }
 }
 
 // generateAndPlayMusic().catch(console.error);
@@ -234,11 +263,3 @@ await player.generateAndPlay(`
     Cultural Context: Everyday life with a touch of the fantastical
     Character Theme: Clara's awareness of the magical
     Narrative Arc: Conclusion, hint at future adventures`);
-
-
-
-
-
-
-
-

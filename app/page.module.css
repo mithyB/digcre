@@ -9,23 +9,27 @@
   width: 560px;
 }
 
+.volumeControl {
+  position: absolute;
+  right: 42px;
+}
+
 .section {
   display: flex;
   justify-content: center;
 }
 
 .textContainer {
-  /* height: 400px; */
   width: 560px;
   border: 1px solid lightgray;
-  /* overflow: auto; */
   line-height: 48px;
   font-size: 32px;
   padding: 42px;
   border-radius: 42px;
 }
 
-.previousPage, .nextPage {
+.previousPage,
+.nextPage {
   position: absolute;
   width: 60px;
   height: 60px;
@@ -41,7 +45,10 @@
   cursor: pointer;
 }
 
-.section[hidden], .previousPage[hidden], .nextPage[hidden] {
+.section[hidden],
+.bookContainer[hidden],
+.previousPage[hidden],
+.nextPage[hidden] {
   display: none;
 }
 
@@ -51,4 +58,80 @@
 
 .nextPage {
   right: calc(50% - 400px);
+}
+
+.backButton {
+  position: absolute;
+  width: 560px;
+  top: 78px;
+  font-size: 32px;
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: #456bff;
+  text-align: left;
+}
+
+.backButton:hover {
+  text-decoration: underline;
+}
+
+.bookContainer {
+  display: flex;
+  justify-content: center;
+  gap: 42px;
+  flex-wrap: wrap;
+}
+
+.bookButton {
+  width: 200px;
+  height: 300px;
+  padding: 16px;
+  display: flex;
+  justify-content: left;
+  align-items: top;
+  border: none;
+  font-weight: 900;
+  font-size: xx-large;
+  text-align: left;
+  line-height: 1em;
+  opacity: 0.8;
+  cursor: pointer;
+  transition: 0.3s;
+  box-shadow: 10px 10px 0 rgba(0, 0, 0, 1);
+}
+
+.bookButton:hover {
+  opacity: 1;
+  transform: perspective(600px) rotateY(-10deg) scale(1.08);
+}
+
+.bookButton.selected {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(1.5);
+  z-index: 1000;
+  transition: transform 0.3s ease, top 0.3s ease, left 0.3s ease;
+  opacity: 1;
+  cursor: auto;
+  animation: pulsate 1.5s infinite;
+}
+
+@keyframes pulsate {
+  0% {
+    transform: translate(-50%, -50%) scale(1.5);
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.6);
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.5);
+  }
+}
+
+.bookButton.notSelected {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
 }

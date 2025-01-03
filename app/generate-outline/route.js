@@ -15,6 +15,9 @@ async function generate(prompt) {
     input,
   });
   const joinedOutput = output.join('').toLowerCase();
+
+  console.log('Output:', joinedOutput);
+
   const arrayFinderRegex =
     /[.\w\W\d\D\s\S]*(\[[.\w\W\d\D\s\S]*\])[.\w\W\d\D\s\S]*/gm;
   const array = arrayFinderRegex.exec(joinedOutput);

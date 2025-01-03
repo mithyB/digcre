@@ -1,22 +1,21 @@
 {
   "name": "ambiread",
-  "version": "0.0.1",
-  "description": "",
-  "main": "index.html",
-  "type": "module",
+  "version": "0.1.0",
+  "private": true,
   "scripts": {
-    "build": "webpack",
-    "start": "npx watch-http-server .",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
   },
-  "author": "",
-  "license": "ISC",
   "dependencies": {
-    "node-web-audio-api": "^0.21.3",
+    "next": "15.0.4",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
     "replicate": "^1.0.1"
   },
   "devDependencies": {
-    "webpack": "^5.96.1",
-    "webpack-cli": "^5.1.4"
+    "eslint": "^8",
+    "eslint-config-next": "15.0.4"
   }
 }
